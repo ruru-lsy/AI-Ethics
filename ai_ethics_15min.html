@@ -55,7 +55,7 @@ body { font-family: 'Noto Sans KR', sans-serif; background: #f8f9fa; color: #212
 .law-label { font-size: 12px; color: #555; font-weight: 600; margin-bottom: 6px; }
 textarea { width: 100%; border: 1.5px solid #ddd; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: inherit; color: #333; background: #fff; resize: none; height: 64px; }
 textarea:focus { outline: none; border-color: #378ADD; }
-.law-submit { margin-top: 8px; padding: 9px 18px; border: 1.5px solid #ddd; border-radius: 8px; background: #fff; font-size: 12px; font-family: inherit; color: #333; cursor: pointer; font-weight: 600; }
+.law-submit { margin-top: 8px; padding: 9px 18px; border: none; border-radius: 8px; background: #1a1a1a; font-size: 12px; font-family: inherit; color: #fff; cursor: pointer; font-weight: 600; }
 .law-item { padding: 9px 12px; margin-bottom: 6px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #333; border-left: 3px solid #378ADD; }
 .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; font-size: 13px; padding: 10px 20px; border-radius: 999px; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 999; }
 .toast.show { opacity: 1; }
@@ -134,9 +134,9 @@ textarea:focus { outline: none; border-color: #378ADD; }
     <div class="key-card"><span class="key-badge" style="background:#FAEEDA;color:#633806">안전</span><div class="key-title">내 정보는 안전한가?</div><div class="key-desc">개인정보·실명·민감 데이터 입력 절대 금지</div></div>
   </div>
   <div class="law-area">
-    <div class="law-label">✍️ 우리 반 AI 헌법 1조</div>
+    <div class="law-label">✍️ 우리 반 AI 헌법 1조 — 한 줄로 작성하고 제출하세요</div>
     <textarea id="lawInput" placeholder="예: AI가 준 정보는 반드시 한 번 더 확인한다."></textarea>
-    <button class="law-submit" onclick="submitLaw()">등록 →</button>
+    <button class="law-submit" onclick="submitLaw()">Sheets에 제출 →</button>
   </div>
   <div id="lawList" style="padding:0 1rem 1rem"></div>
   <button class="btn-secondary" onclick="goPhase1()">← 처음으로</button>
@@ -157,7 +157,7 @@ const dilemmas = [
   { title:"딜레마 6 — 자율주행 트롤리", q:"자율주행차가 사고 상황에서 탑승자 1명 vs 보행자 3명 중 선택해야 한다면, AI가 결정해도 될까?", yes:"AI가 결정해도 된다", no:"인간이 결정해야 한다", tip:"가치 판단을 AI에게 맡길 수 있는가? 트롤리 딜레마의 현대판이에요." }
 ];
 
-let selected = -1, myVote = null, pollInterval = null, laws = [];
+let selected = -1, myVote = null, pollInterval = null;
 
 function selectCard(i) {
   document.querySelectorAll('.card').forEach((c,idx) => c.classList.toggle('selected', idx===i));
@@ -193,7 +193,7 @@ function vote(side) {
   fetch(SCRIPT_URL, {
     method: 'POST', mode: 'no-cors',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ dilemma: selected+1, choice: side })
+    body: JSON.stringify({ type: 'vote', dilemma: selected+1, choice: side })
   }).then(() => { showToast(side==='yes' ? '✓ 찬성 투표 완료!' : '✗ 반대 투표 완료!'); setTimeout(fetchResults, 1000); })
     .catch(() => showToast('전송 오류 — 다시 시도해보세요'));
 }
@@ -230,9 +230,16 @@ function goPhase3() { clearInterval(pollInterval); showPhase('phase3'); }
 function submitLaw() {
   const val = document.getElementById('lawInput').value.trim();
   if (!val) return;
-  laws.push(val);
-  document.getElementById('lawInput').value = '';
-  document.getElementById('lawList').innerHTML = laws.map((l,i) => `<div class="law-item">제${i+1}조 &nbsp;${l}</div>`).join('');
+  fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'law', text: val })
+  }).then(() => {
+    showToast('헌법 1조 제출 완료!');
+    const list = document.getElementById('lawList');
+    list.innerHTML += `<div class="law-item">${val}</div>`;
+    document.getElementById('lawInput').value = '';
+  }).catch(() => showToast('전송 오류 — 다시 시도해보세요'));
 }
 
 function showPhase(id) {
