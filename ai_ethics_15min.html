@@ -1,14 +1,252 @@
-function doPost(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("votes");
-  const data = JSON.parse(e.postData.contents);
-  sheet.appendRow([data.dilemma, data.choice, new Date()]);
-  return ContentService.createTextOutput(JSON.stringify({status:"ok"}))
-    .setMimeType(ContentService.MimeType.JSON);
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>슬기로운 AI 탐구생활</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Noto Sans KR', sans-serif; background: #f8f9fa; color: #212529; min-height: 100vh; }
+.wrap { max-width: 480px; margin: 0 auto; background: #fff; min-height: 100vh; padding-bottom: 2rem; }
+.header { padding: 1.5rem 1rem 0.5rem; text-align: center; border-bottom: 1px solid #f0f0f0; }
+.header h1 { font-size: 20px; font-weight: 700; color: #1a1a1a; }
+.header p { font-size: 13px; color: #888; margin-top: 4px; }
+.section-title { font-size: 11px; font-weight: 600; color: #888; letter-spacing: 0.06em; text-transform: uppercase; padding: 1rem 1rem 0.5rem; }
+.cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; padding: 0 1rem 1rem; }
+.card { background: #fff; border: 1.5px solid #e8e8e8; border-radius: 12px; padding: 0.85rem; cursor: pointer; transition: all 0.15s; }
+.card:active { transform: scale(0.97); }
+.card.selected { border-color: #378ADD; background: #f0f7ff; }
+.card-num { font-size: 10px; color: #aaa; margin-bottom: 4px; }
+.card-title { font-size: 13px; font-weight: 700; color: #1a1a1a; margin-bottom: 4px; }
+.card-desc { font-size: 11px; color: #888; line-height: 1.5; }
+.btn-primary { display: block; margin: 0 1rem; width: calc(100% - 2rem); padding: 13px 0; border: none; border-radius: 10px; background: #1a1a1a; font-size: 14px; font-family: inherit; font-weight: 600; color: #fff; cursor: pointer; }
+.btn-primary:disabled { background: #ccc; cursor: default; }
+.btn-secondary { display: block; margin: 8px 1rem 0; width: calc(100% - 2rem); padding: 11px 0; border: 1.5px solid #ddd; border-radius: 10px; background: #fff; font-size: 13px; font-family: inherit; color: #555; cursor: pointer; }
+.dilemma-box { margin: 1rem; background: #f8f9fa; border-radius: 12px; padding: 1rem; }
+.dilemma-title { font-size: 14px; font-weight: 700; color: #1a1a1a; margin-bottom: 6px; }
+.dilemma-q { font-size: 13px; color: #444; line-height: 1.7; }
+.vote-area { padding: 0 1rem; margin-bottom: 1rem; }
+.vote-label { font-size: 12px; color: #555; font-weight: 600; margin-bottom: 8px; }
+.vote-btns { display: flex; gap: 8px; }
+.vote-btn { flex: 1; padding: 12px 6px; border: 1.5px solid #ddd; border-radius: 10px; background: #fff; font-size: 12px; font-family: inherit; color: #333; cursor: pointer; line-height: 1.5; text-align: center; }
+.vote-btn:active { transform: scale(0.96); }
+.vote-btn.yes { border-color: #0F6E56; background: #E1F5EE; color: #085041; font-weight: 700; }
+.vote-btn.no { border-color: #993C1D; background: #FAECE7; color: #4A1B0C; font-weight: 700; }
+.result-box { margin: 0 1rem 1rem; background: #f8f9fa; border-radius: 12px; padding: 1rem; }
+.result-title { font-size: 11px; font-weight: 600; color: #888; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+.live { background: #ff4444; color: #fff; font-size: 9px; font-weight: 700; padding: 2px 5px; border-radius: 4px; animation: blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bar-label { font-size: 12px; color: #555; width: 36px; font-weight: 600; }
+.bar-track { flex: 1; height: 12px; background: #e0e0e0; border-radius: 999px; overflow: hidden; }
+.bar-yes { height: 100%; background: #1D9E75; border-radius: 999px; transition: width 0.6s ease; }
+.bar-no { height: 100%; background: #D85A30; border-radius: 999px; transition: width 0.6s ease; }
+.bar-num { font-size: 12px; font-weight: 700; color: #333; width: 24px; text-align: right; }
+.total-text { font-size: 11px; color: #aaa; text-align: center; margin-top: 4px; }
+.tip-box { margin: 0 1rem 1rem; border-left: 3px solid #378ADD; padding: 0.7rem 0.85rem; background: #f0f7ff; border-radius: 0 8px 8px 0; }
+.tip-label { font-size: 10px; color: #185FA5; font-weight: 700; margin-bottom: 3px; }
+.tip-text { font-size: 12px; color: #444; line-height: 1.6; }
+.key-cards { padding: 0 1rem; display: grid; gap: 8px; margin-bottom: 1rem; }
+.key-card { background: #fff; border: 1.5px solid #e8e8e8; border-radius: 12px; padding: 0.85rem; }
+.key-badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px; margin-bottom: 6px; font-weight: 600; }
+.key-title { font-size: 13px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
+.key-desc { font-size: 12px; color: #888; }
+.law-area { padding: 0 1rem 1rem; }
+.law-label { font-size: 12px; color: #555; font-weight: 600; margin-bottom: 6px; }
+textarea { width: 100%; border: 1.5px solid #ddd; border-radius: 10px; padding: 10px 12px; font-size: 13px; font-family: inherit; color: #333; background: #fff; resize: none; height: 64px; }
+textarea:focus { outline: none; border-color: #378ADD; }
+.law-submit { margin-top: 8px; padding: 9px 18px; border: 1.5px solid #ddd; border-radius: 8px; background: #fff; font-size: 12px; font-family: inherit; color: #333; cursor: pointer; font-weight: 600; }
+.law-item { padding: 9px 12px; margin-bottom: 6px; background: #f8f9fa; border-radius: 8px; font-size: 13px; color: #333; border-left: 3px solid #378ADD; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; font-size: 13px; padding: 10px 20px; border-radius: 999px; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; z-index: 999; }
+.toast.show { opacity: 1; }
+.phase { display: none; }
+.phase.active { display: block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div id="phase1" class="phase active">
+  <div class="header">
+    <h1>슬기로운 AI 탐구생활</h1>
+    <p>오늘의 딜레마를 선택하고 투표하세요</p>
+  </div>
+  <div class="section-title">⚡ 딜레마를 골라요</div>
+  <div class="cards">
+    <div class="card" onclick="selectCard(0)"><div class="card-num">딜레마 1</div><div class="card-title">A vs B 독후감</div><div class="card-desc">10시간 vs 1분. 둘 다 A+?</div></div>
+    <div class="card" onclick="selectCard(1)"><div class="card-num">딜레마 2</div><div class="card-title">AI 과제 출처</div><div class="card-desc">AI 숙제, 내 이름으로 내도 될까?</div></div>
+    <div class="card" onclick="selectCard(2)"><div class="card-num">딜레마 3</div><div class="card-title">내 정보 입력</div><div class="card-desc">생활기록부를 AI에 붙여넣기?</div></div>
+    <div class="card" onclick="selectCard(3)"><div class="card-num">딜레마 4</div><div class="card-title">딥페이크 사진</div><div class="card-desc">친구 얼굴 합성 짤 공유?</div></div>
+    <div class="card" onclick="selectCard(4)"><div class="card-num">딜레마 5</div><div class="card-title">AI 환각 답변</div><div class="card-desc">AI가 자신 있게 틀렸다?</div></div>
+    <div class="card" onclick="selectCard(5)"><div class="card-num">딜레마 6</div><div class="card-title">자율주행 트롤리</div><div class="card-desc">AI가 생사를 결정해도 될까?</div></div>
+  </div>
+  <button class="btn-primary" id="startBtn" onclick="goPhase2()" disabled>선택 완료 → 투표하기</button>
+</div>
+
+<div id="phase2" class="phase">
+  <div class="header">
+    <h1 id="phaseTitle"></h1>
+    <p>투표하고 실시간 결과를 확인하세요</p>
+  </div>
+  <div style="height:12px"></div>
+  <div class="dilemma-box">
+    <div class="dilemma-title" id="dilemmaTitle"></div>
+    <div class="dilemma-q" id="dilemmaQ"></div>
+  </div>
+  <div class="vote-area">
+    <div class="vote-label">👇 나의 선택</div>
+    <div class="vote-btns">
+      <button class="vote-btn" id="btnYes" onclick="vote('yes')"></button>
+      <button class="vote-btn" id="btnNo" onclick="vote('no')"></button>
+    </div>
+  </div>
+  <div class="result-box">
+    <div class="result-title">실시간 집계 <span class="live">LIVE</span></div>
+    <div class="bar-row">
+      <span class="bar-label">찬성</span>
+      <div class="bar-track"><div class="bar-yes" id="barYes" style="width:0%"></div></div>
+      <span class="bar-num" id="cntYes">0</span>
+    </div>
+    <div class="bar-row">
+      <span class="bar-label">반대</span>
+      <div class="bar-track"><div class="bar-no" id="barNo" style="width:0%"></div></div>
+      <span class="bar-num" id="cntNo">0</span>
+    </div>
+    <div class="total-text" id="totalText">아직 투표가 없어요</div>
+  </div>
+  <div class="tip-box">
+    <div class="tip-label">생각해볼 포인트</div>
+    <div class="tip-text" id="tipText"></div>
+  </div>
+  <button class="btn-primary" onclick="goPhase3()">정리 화면으로 →</button>
+  <button class="btn-secondary" onclick="goPhase1()">← 딜레마 다시 선택</button>
+</div>
+
+<div id="phase3" class="phase">
+  <div class="header">
+    <h1>AI 마스터의 황금 열쇠 🔑</h1>
+    <p>이 세 가지만 기억하면 충분해요</p>
+  </div>
+  <div style="height:12px"></div>
+  <div class="key-cards">
+    <div class="key-card"><span class="key-badge" style="background:#E6F1FB;color:#0C447C">도구</span><div class="key-title">무엇을 어떻게 쓸 것인가?</div><div class="key-desc">연령 제한 규정 준수 및 윤리적 활용</div></div>
+    <div class="key-card"><span class="key-badge" style="background:#E1F5EE;color:#085041">저작권</span><div class="key-title">AI가 만든 것은 누구의 것?</div><div class="key-desc">인간의 창작물이 아님을 인지하고 출처 명시</div></div>
+    <div class="key-card"><span class="key-badge" style="background:#FAEEDA;color:#633806">안전</span><div class="key-title">내 정보는 안전한가?</div><div class="key-desc">개인정보·실명·민감 데이터 입력 절대 금지</div></div>
+  </div>
+  <div class="law-area">
+    <div class="law-label">✍️ 우리 반 AI 헌법 1조</div>
+    <textarea id="lawInput" placeholder="예: AI가 준 정보는 반드시 한 번 더 확인한다."></textarea>
+    <button class="law-submit" onclick="submitLaw()">등록 →</button>
+  </div>
+  <div id="lawList" style="padding:0 1rem 1rem"></div>
+  <button class="btn-secondary" onclick="goPhase1()">← 처음으로</button>
+</div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzY13JJSwt08J8ReC1GkUuQjfspGtXj9tjAlHX7GFiDsNINs-E3ooSqxmt6jhs_Z8/exec";
+
+const dilemmas = [
+  { title:"딜레마 1 — A vs B 독후감", q:"A는 10시간 써서 독후감을 냈고, B는 AI로 1분 만에 같은 품질을 제출했다. 둘 다 A+를 주는 건 공정한 평가일까?", yes:"공정하다 (결과가 같으니까)", no:"공정하지 않다 (과정이 다르니까)", tip:"결과 중심 vs 과정 중심 평가의 충돌이에요. AI 시대의 노력이란 무엇일까요?" },
+  { title:"딜레마 2 — AI 과제 출처", q:"AI가 전면 생성한 시를 대회에 내 이름으로 제출했다. 잘못된 걸까?", yes:"잘못됐다 (저작권·정직 위반)", no:"괜찮다 (도구를 잘 쓴 것)", tip:"AI 산출물을 쓸 때는 반드시 출처를 밝히는 것이 디지털 에티켓이에요." },
+  { title:"딜레마 3 — 내 정보 AI 입력", q:"생활기록부 초안(실명·성적 포함)을 ChatGPT에 붙여넣기 했다. 무슨 문제가 생길까?", yes:"심각한 문제다 (개인정보 유출)", no:"괜찮다 (비공개니까)", tip:"무료 퍼블릭 AI에 입력한 데이터는 후속 학습에 사용될 수 있어요. 익명화가 핵심이에요." },
+  { title:"딜레마 4 — 딥페이크 짤", q:"친구 얼굴을 AI로 합성해 웃긴 짤을 만들어 단톡방에 공유했다. 괜찮을까?", yes:"괜찮다 (재미로 한 것)", no:"안 된다 (디지털 범죄)", tip:"딥페이크는 동의 없는 얼굴 조작 자체가 범죄예요. 재미라도 예외가 없어요." },
+  { title:"딜레마 5 — AI 환각 답변", q:"AI가 세종대왕이 스마트폰을 발명했다고 자신 있게 답했다. 나는 그냥 믿어도 될까?", yes:"믿어도 된다 (AI는 정확하니까)", no:"반드시 팩트체크 해야 한다", tip:"AI는 모르는 것도 자신 있게 지어낼 수 있어요. 교차 검증 습관이 중요해요." },
+  { title:"딜레마 6 — 자율주행 트롤리", q:"자율주행차가 사고 상황에서 탑승자 1명 vs 보행자 3명 중 선택해야 한다면, AI가 결정해도 될까?", yes:"AI가 결정해도 된다", no:"인간이 결정해야 한다", tip:"가치 판단을 AI에게 맡길 수 있는가? 트롤리 딜레마의 현대판이에요." }
+];
+
+let selected = -1, myVote = null, pollInterval = null, laws = [];
+
+function selectCard(i) {
+  document.querySelectorAll('.card').forEach((c,idx) => c.classList.toggle('selected', idx===i));
+  selected = i;
+  document.getElementById('startBtn').disabled = false;
 }
 
-function doGet(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("votes");
-  const rows = sheet.getDataRange().getValues().slice(1);
-  return ContentService.createTextOutput(JSON.stringify(rows))
-    .setMimeType(ContentService.MimeType.JSON);
+function goPhase1() { clearInterval(pollInterval); myVote = null; showPhase('phase1'); }
+
+function goPhase2() {
+  if (selected < 0) return;
+  const d = dilemmas[selected];
+  document.getElementById('phaseTitle').textContent = '딜레마 ' + (selected+1);
+  document.getElementById('dilemmaTitle').textContent = d.title;
+  document.getElementById('dilemmaQ').textContent = d.q;
+  document.getElementById('btnYes').textContent = '✓ ' + d.yes;
+  document.getElementById('btnNo').textContent = '✗ ' + d.no;
+  document.getElementById('tipText').textContent = d.tip;
+  document.getElementById('btnYes').className = 'vote-btn';
+  document.getElementById('btnNo').className = 'vote-btn';
+  myVote = null;
+  updateBar(0,0);
+  showPhase('phase2');
+  fetchResults();
+  pollInterval = setInterval(fetchResults, 3000);
 }
+
+function vote(side) {
+  if (myVote) { showToast('이미 투표했어요!'); return; }
+  myVote = side;
+  document.getElementById('btnYes').className = 'vote-btn' + (side==='yes' ? ' yes' : '');
+  document.getElementById('btnNo').className = 'vote-btn' + (side==='no' ? ' no' : '');
+  fetch(SCRIPT_URL, {
+    method: 'POST', mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dilemma: selected+1, choice: side })
+  }).then(() => { showToast(side==='yes' ? '✓ 찬성 투표 완료!' : '✗ 반대 투표 완료!'); setTimeout(fetchResults, 1000); })
+    .catch(() => showToast('전송 오류 — 다시 시도해보세요'));
+}
+
+function fetchResults() {
+  fetch(SCRIPT_URL + '?dilemma=' + (selected+1))
+    .then(r => r.json())
+    .then(data => {
+      let yes = 0, no = 0;
+      if (Array.isArray(data)) {
+        data.forEach(row => {
+          if (String(row[0]) === String(selected+1)) {
+            if (row[1]==='yes') yes++; else if (row[1]==='no') no++;
+          }
+        });
+      }
+      updateBar(yes, no);
+    }).catch(() => {});
+}
+
+function updateBar(yes, no) {
+  const total = yes + no;
+  const yp = total ? Math.round(yes/total*100) : 0;
+  const np = total ? Math.round(no/total*100) : 0;
+  document.getElementById('barYes').style.width = yp+'%';
+  document.getElementById('barNo').style.width = np+'%';
+  document.getElementById('cntYes').textContent = yes;
+  document.getElementById('cntNo').textContent = no;
+  document.getElementById('totalText').textContent = total ? '총 '+total+'명 투표 · 찬성 '+yp+'% / 반대 '+np+'%' : '아직 투표가 없어요';
+}
+
+function goPhase3() { clearInterval(pollInterval); showPhase('phase3'); }
+
+function submitLaw() {
+  const val = document.getElementById('lawInput').value.trim();
+  if (!val) return;
+  laws.push(val);
+  document.getElementById('lawInput').value = '';
+  document.getElementById('lawList').innerHTML = laws.map((l,i) => `<div class="law-item">제${i+1}조 &nbsp;${l}</div>`).join('');
+}
+
+function showPhase(id) {
+  document.querySelectorAll('.phase').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+</script>
+</body>
+</html>
