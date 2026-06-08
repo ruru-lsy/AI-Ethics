@@ -75,9 +75,9 @@ textarea:focus { outline: none; border-color: #378ADD; }
   <div class="cards">
     <div class="card" onclick="selectCard(0)"><div class="card-num">딜레마 1</div><div class="card-title">A vs B 독후감</div><div class="card-desc">10시간 vs 1분. 둘 다 A+?</div></div>
     <div class="card" onclick="selectCard(1)"><div class="card-num">딜레마 2</div><div class="card-title">AI 과제 출처</div><div class="card-desc">AI 숙제, 내 이름으로 내도 될까?</div></div>
-    <div class="card" onclick="selectCard(2)"><div class="card-num">딜레마 3</div><div class="card-title">내 정보 입력</div><div class="card-desc">생활기록부를 AI에 붙여넣기?</div></div>
-    <div class="card" onclick="selectCard(3)"><div class="card-num">딜레마 4</div><div class="card-title">딥페이크 사진</div><div class="card-desc">친구 얼굴 합성 짤 공유?</div></div>
-    <div class="card" onclick="selectCard(4)"><div class="card-num">딜레마 5</div><div class="card-title">AI 환각 답변</div><div class="card-desc">AI가 자신 있게 틀렸다?</div></div>
+    <div class="card" onclick="selectCard(2)"><div class="card-num">딜레마 3</div><div class="card-title">딥페이크 증거</div><div class="card-desc">학폭 증거로 딥페이크를 써도 될까?</div></div>
+    <div class="card" onclick="selectCard(3)"><div class="card-num">딜레마 4</div><div class="card-title">AI 의사 판단</div><div class="card-desc">의사 없을 때 AI 판단만 믿고 수술?</div></div>
+    <div class="card" onclick="selectCard(4)"><div class="card-num">딜레마 5</div><div class="card-title">AI 감시 카메라</div><div class="card-desc">동의 없이 표정 분석해 자해 예측?</div></div>
     <div class="card" onclick="selectCard(5)"><div class="card-num">딜레마 6</div><div class="card-title">자율주행 트롤리</div><div class="card-desc">AI가 생사를 결정해도 될까?</div></div>
   </div>
   <button class="btn-primary" id="startBtn" onclick="goPhase2()" disabled>선택 완료 → 투표하기</button>
@@ -149,12 +149,48 @@ textarea:focus { outline: none; border-color: #378ADD; }
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz1Ahk4Wk7wM-GdJuFnqnnLkrDEUBse7PiHiG6cf4Db3Z0bnuf_Dlog2REdTIOc_RA/exec";
 
 const dilemmas = [
-  { title:"딜레마 1 — A vs B 독후감", q:"A는 10시간 써서 독후감을 냈고, B는 AI로 1분 만에 같은 품질을 제출했다. 둘 다 A+를 주는 건 공정한 평가일까?", yes:"공정하다 (결과가 같으니까)", no:"공정하지 않다 (과정이 다르니까)", tip:"결과 중심 vs 과정 중심 평가의 충돌이에요. AI 시대의 노력이란 무엇일까요?" },
-  { title:"딜레마 2 — AI 과제 출처", q:"AI가 전면 생성한 시를 대회에 내 이름으로 제출했다. 잘못된 걸까?", yes:"잘못됐다 (저작권·정직 위반)", no:"괜찮다 (도구를 잘 쓴 것)", tip:"AI 산출물을 쓸 때는 반드시 출처를 밝히는 것이 디지털 에티켓이에요." },
-  { title:"딜레마 3 — 내 정보 AI 입력", q:"생활기록부 초안(실명·성적 포함)을 ChatGPT에 붙여넣기 했다. 무슨 문제가 생길까?", yes:"심각한 문제다 (개인정보 유출)", no:"괜찮다 (비공개니까)", tip:"무료 퍼블릭 AI에 입력한 데이터는 후속 학습에 사용될 수 있어요. 익명화가 핵심이에요." },
-  { title:"딜레마 4 — 딥페이크 짤", q:"친구 얼굴을 AI로 합성해 웃긴 짤을 만들어 단톡방에 공유했다. 괜찮을까?", yes:"괜찮다 (재미로 한 것)", no:"안 된다 (디지털 범죄)", tip:"딥페이크는 동의 없는 얼굴 조작 자체가 범죄예요. 재미라도 예외가 없어요." },
-  { title:"딜레마 5 — AI 환각 답변", q:"AI가 세종대왕이 스마트폰을 발명했다고 자신 있게 답했다. 나는 그냥 믿어도 될까?", yes:"믿어도 된다 (AI는 정확하니까)", no:"반드시 팩트체크 해야 한다", tip:"AI는 모르는 것도 자신 있게 지어낼 수 있어요. 교차 검증 습관이 중요해요." },
-  { title:"딜레마 6 — 자율주행 트롤리", q:"자율주행차가 사고 상황에서 탑승자 1명 vs 보행자 3명 중 선택해야 한다면, AI가 결정해도 될까?", yes:"AI가 결정해도 된다", no:"인간이 결정해야 한다", tip:"가치 판단을 AI에게 맡길 수 있는가? 트롤리 딜레마의 현대판이에요." }
+  {
+    title: "딜레마 1 — A vs B 독후감",
+    q: "A는 10시간 써서 독후감을 냈고, B는 AI로 1분 만에 같은 품질을 제출했다. 둘 다 A+를 주는 건 공정한 평가일까?",
+    yes: "공정하다 (결과가 같으니까)",
+    no: "공정하지 않다 (과정이 다르니까)",
+    tip: "결과 중심 vs 과정 중심 평가의 충돌이에요. AI 시대의 노력이란 무엇일까요?"
+  },
+  {
+    title: "딜레마 2 — AI 과제 출처",
+    q: "AI가 전면 생성한 시를 대회에 내 이름으로 제출했다. 잘못된 걸까?",
+    yes: "잘못됐다 (저작권·정직 위반)",
+    no: "괜찮다 (도구를 잘 쓴 것)",
+    tip: "AI 산출물을 쓸 때는 반드시 출처를 밝히는 것이 디지털 에티켓이에요."
+  },
+  {
+    title: "딜레마 3 — 딥페이크 증거",
+    q: "학교폭력 가해자를 잡기 위해 피해 학생이 AI로 '가해 장면'을 만들어 증거로 제출했다. 선한 목적이라도 이 증거를 써도 될까?",
+    yes: "써도 된다 (피해자를 위한 것)",
+    no: "안 된다 (조작된 증거는 불법)",
+    tip: "목적이 선해도 수단이 불법이면 정당화될 수 없어요. 딥페이크 증거는 형사 처벌 대상이에요."
+  },
+  {
+    title: "딜레마 4 — AI 의사 판단",
+    q: "응급실에서 의사가 없을 때 AI가 '이 환자는 즉시 수술해야 한다'고 판단했다. 간호사가 AI 판단만 믿고 수술을 진행해도 될까?",
+    yes: "된다 (AI가 더 정확할 수 있다)",
+    no: "안 된다 (의료 책임은 인간에게)",
+    tip: "AI의 판단이 맞더라도 책임 소재가 불분명해져요. 생사 결정에서 인간의 역할은 어디까지일까요?"
+  },
+  {
+    title: "딜레마 5 — AI 감시 카메라",
+    q: "학교에서 AI 카메라로 학생 표정을 분석해 우울증·자해 위험을 사전에 탐지한다. 학생 동의 없이 운영해도 될까?",
+    yes: "된다 (안전이 프라이버시보다 중요)",
+    no: "안 된다 (동의 없는 감시는 인권 침해)",
+    tip: "안전과 프라이버시는 둘 다 중요한 권리예요. 어느 쪽이 우선인지 사회적 합의가 필요해요."
+  },
+  {
+    title: "딜레마 6 — 자율주행 트롤리",
+    q: "자율주행차가 사고 상황에서 탑승자 1명 vs 보행자 3명 중 선택해야 한다면, AI가 결정해도 될까?",
+    yes: "AI가 결정해도 된다",
+    no: "인간이 결정해야 한다",
+    tip: "가치 판단을 AI에게 맡길 수 있는가? 트롤리 딜레마의 현대판이에요."
+  }
 ];
 
 let selected = -1, myVote = null, pollInterval = null;
@@ -236,8 +272,7 @@ function submitLaw() {
     body: JSON.stringify({ type: 'law', text: val })
   }).then(() => {
     showToast('헌법 1조 제출 완료!');
-    const list = document.getElementById('lawList');
-    list.innerHTML += `<div class="law-item">${val}</div>`;
+    document.getElementById('lawList').innerHTML += `<div class="law-item">${val}</div>`;
     document.getElementById('lawInput').value = '';
   }).catch(() => showToast('전송 오류 — 다시 시도해보세요'));
 }
